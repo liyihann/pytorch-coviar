@@ -36,10 +36,30 @@ def main():
     else:
         raise ValueError('Unknown dataset '+ args.data_name)
 
+    '''
+    @Param
+    num_class: total number of classes
+    num_segments: number of TSN segments, default=3
+    representation: iframe, mv, residual
+    base_model: base architecture
+    '''
     model = Model(num_class, args.num_segments, args.representation,
                   base_model=args.arch)
     print(model)
 
+    '''
+    @Param
+    dataset (Dataset) – dataset from which to load the data.
+    
+    batch_size – how many samples per batch to load (default: 1).
+    
+    shuffle – set to True to have the data reshuffled at every epoch.
+    
+    num_workers – how many subprocesses to use for data loading. 0 means that the data will be loaded in the main process. (default: 0)
+    
+    pin_memory – If True, the data loader will copy tensors into CUDA pinned memory before returning them.
+    
+    '''
     train_loader = torch.utils.data.DataLoader(
         CoviarDataSet(
             args.data_root,
@@ -71,6 +91,7 @@ def main():
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
+    # parallel gpu setting
     model = torch.nn.DataParallel(model, device_ids=args.gpus).cuda()
     cudnn.benchmark = True
 
@@ -130,29 +151,33 @@ def train(train_loader, model, criterion, optimizer, epoch, cur_lr):
     end = time.time()
 
     for i, (input, target) in enumerate(train_loader):
-
+        # measure data loading time
         data_time.update(time.time() - end)
 
         target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
+        # compute output
         output = model(input_var)
         output = output.view((-1, args.num_segments) + output.size()[1:])
         output = torch.mean(output, dim=1)
 
         loss = criterion(output, target_var)
 
+        # measure accuracy and record loss
         prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
         losses.update(loss.data[0], input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
 
+        # compute gradient and do SGD step
         optimizer.zero_grad()
 
         loss.backward()
         optimizer.step()
 
+        # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
@@ -177,6 +202,7 @@ def validate(val_loader, model, criterion):
     top1 = AverageMeter()
     top5 = AverageMeter()
 
+    # switch to evaluate mode
     model.eval()
 
     end = time.time()

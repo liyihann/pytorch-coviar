@@ -84,24 +84,57 @@ void create_and_load_mv_residual(
 
     int p_dst_x, p_dst_y, p_src_x, p_src_y, val_x, val_y;
     const AVMotionVector *mvs = (const AVMotionVector *)sd->data;
+    // ?? sd->data: side data of one I-frame stores all succeeding motion vectors?
 
     for (int i = 0; i < sd->size / sizeof(*mvs); i++) {
+    // ?? iterate through all mvs succeeding one I-frame
+
         const AVMotionVector *mv = &mvs[i];
         assert(mv->source == -1);
 
+         /** AVMotionVector
+            * @param
+            * int32_t source : Where the current macroblock comes from;
+                                negative value when it comes from the past,
+                                positive value when it comes from the future.
+                                XXX: set exact relative ref frame reference instead of a +/- 1 "direction".
+            * uint8_t w, h : Width and height of the block.
+            * int16_t src_x, src_y: Absolute source position. Can be outside the frame area.
+            * int16_t dst_x, dst_y: Absolute destination position. Can be outside the frame area.
+            */
+
+        // motion on at least one of the direction (x or y) is non-zero
         if (mv->dst_x - mv->src_x != 0 || mv->dst_y - mv->src_y != 0) {
 
+            // motion along x axis
             val_x = mv->dst_x - mv->src_x;
+            // motion along y axis
             val_y = mv->dst_y - mv->src_y;
 
+            /** ??
+                * And through motion compensation at the following frames,
+                * the pixel might be copied to other locations.
+                * We compare the final location with the original location
+                * to get accumulated motion vectors (and accumulated residuals).
+                */
+
+
+           // To get accumulated MV and residuals
+
+           // ?? loop over all pixels
+           // ?? keep track of where a pixel moves in the following frames
+
+           // ?? Not sure what  (-1 * mv->w / 2) means
             for (int x_start = (-1 * mv->w / 2); x_start < mv->w / 2; ++x_start) {
                 for (int y_start = (-1 * mv->h / 2); y_start < mv->h / 2; ++y_start) {
-                    p_dst_x = mv->dst_x + x_start;
-                    p_dst_y = mv->dst_y + y_start;
 
-                    p_src_x = mv->src_x + x_start;
-                    p_src_y = mv->src_y + y_start;
+                    p_dst_x = mv->dst_x + x_start; // p_dst_x: absolute dest position of current p-frame along x axis
+                    p_dst_y = mv->dst_y + y_start; // p_dst_y = absolute dest position of current p-frame along y axis //
 
+                    p_src_x = mv->src_x + x_start; // p_src_x: absolute source position of current p-frame along x axis
+                    p_src_y = mv->src_y + y_start; // p_src_y: absolute source position of current p-frame along y axis
+
+                   // make sure that the position is within the block
                     if (p_dst_y >= 0 && p_dst_y < height && 
                         p_dst_x >= 0 && p_dst_x < width &&
                         p_src_y >= 0 && p_src_y < height && 
@@ -109,7 +142,9 @@ void create_and_load_mv_residual(
 
                         // Write MV. 
                         if (accumulate) {
-                            for (int c = 0; c < 2; ++c) {
+                            for (int c = 0; c < 2; ++c) { // c = 0 : x-position; c = 1 : y-position
+
+                            // assign src postion in accu_src_old to
                                 accu_src       [p_dst_x * height * 2 + p_dst_y * 2 + c]
                                  = accu_src_old[p_src_x * height * 2 + p_src_y * 2 + c];
                             }
@@ -126,6 +161,13 @@ void create_and_load_mv_residual(
         memcpy(accu_src_old, accu_src, width * height * 2 * sizeof(int));
     }
     if (cur_pos > 0){
+
+       // Generate motion vector in the case of accumulate.
+    // accu_src[x,y,0] indicates the postion of current pixel in the last key-frame on x-axis.
+    // accu_src[x,y,1] indicates the postion of current pixel in the last key-frame on y-axis.
+    // Thus x - accu_src[x,y,0] indicates how far the current pixel (x,y) has moved along x-axis.
+    // Similarly, y - accu_src[x,y,0] indicates how far the current pixel (x,y) has moved along y-axis.
+
         if (accumulate) {
             if (representation == MV && cur_pos == pos_target) {
                 for (int x = 0; x < width; ++x) {
@@ -271,10 +313,14 @@ int decode_video(
             if(packet.size==0)  
                 continue;  
 
+      // Type of frame. Could be one of I-frame (AV_PICTURE_TYPE_I), P-frame (AV_PICTURE_TYPE_P), B-frame (AV_PICTURE_TYPE_B), etc.
+      // ++cur_gop since I-frame indicates that a new gop starts.
             if (pCodecParserCtx->pict_type == AV_PICTURE_TYPE_I) {
                 ++cur_gop;
             }
 
+      // We have find the desired gop. Now, start to identify the desired position.
+      // This position is between 0~11, indicating the position inside current gop.
             if (cur_gop == gop_target && cur_pos <= pos_target) {
       
                 ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, &packet);  
@@ -285,13 +331,18 @@ int decode_video(
                 int h = pFrame->height;
                 int w = pFrame->width;
 
-                // Initialize arrays. 
+                // Initialize arrays.
                 if (! (*bgr_arr)) {
+
+                // npy_intp: Integer that can hold a pointer
+                // The constants NPY_INTP and NPY_UINTP refer to an enumerated integer type
+                // that is large enough to hold a pointer on the platform.
+                // Index arrays should always be converted to NPY_INTP , because the dimension of the array is of type npy_intp.
                     npy_intp dims[4];
-                    dims[0] = 2;
-                    dims[1] = h;
-                    dims[2] = w;
-                    dims[3] = 3;
+                    dims[0] = 2; // ?
+                    dims[1] = h; //pFrame->height
+                    dims[2] = w; //pFrame->width
+                    dims[3] = 3; // ?
                     *bgr_arr = PyArray_ZEROS(4, dims, NPY_UINT8, 0);
                 }
 
@@ -313,51 +364,96 @@ int decode_video(
                     *res_arr = PyArray_ZEROS(3, dims, NPY_INT32, 0);
                 }
 
+
+               // This code is used when accumulation is required.
+               // If accumulate, then initialize accu_src and accu_src_old.
+
                 if ((representation == MV ||
                      representation == RESIDUAL) && accumulate && 
                     !accu_src && !accu_src_old) {
-                    accu_src     = (int*) malloc(w * h * 2 * sizeof(int));
+                    accu_src     = (int*) malloc(w * h * 2 * sizeof(int)); // ?? (w * h pixels) * (1 x_pos + 1 y_pos)
                     accu_src_old = (int*) malloc(w * h * 2 * sizeof(int));
 
+                    // loop over all pixels
                     for (size_t x = 0; x < w; ++x) {
                         for (size_t y = 0; y < h; ++y) {
-                            accu_src_old[x * h * 2 + y * 2    ]  = x;
+                            //To get accumulated MV and residuals, we keep track of "where a pixel moves in the following frames".
+                             // Initially, the location of a pixel at (x, y) is (x, y).
+                            // So we initialized it as (x, y).
+                            accu_src_old[x * h * 2 + y * 2    ]  = x; // assign x pos to accu_src_old
                             accu_src_old[x * h * 2 + y * 2 + 1]  = y;
+                            // accu_src_old: x0 y0 x1 y1 ...
                         }
                     }
+                    // And through motion compensation at the following frames,
+                    // the pixel might be copied to other locations.
+
+                    // assign accu_src_old to accu_src
+                    // to record the old accu_src and compare later ??
+
+                    //memcpy(dest, source, sizeof dest);
                     memcpy(accu_src, accu_src_old, h * w * 2 * sizeof(int));
                 }
 
-                if (got_picture) {
 
-                    if ((cur_pos == 0              && accumulate  && representation == RESIDUAL) ||
-                        (cur_pos == pos_target - 1 && !accumulate && representation == RESIDUAL) ||
-                        cur_pos == pos_target) {
+
+               /**
+                * is the following codes means that every frame in the target gop
+                * before target frame will be decoded, and only the I-frame
+                * and the target frame will be transit to bgr form?
+
+
+                * The reason why we construct BGR is to compute accumulated residuals,
+                * which is the difference between the predicted frame
+                *  (without adding residual along the path) and the actual frame.
+                * Predicted frame is a function of MVs and I-frame.
+                * So we only need MVs of the frames in between the target frame and I-frame,
+                * without the need to decode BGR for them.
+                **/
+
+                  // A non-zero got_picture means that a pFrame contains a decompressed frame.
+
+                if (got_picture) {
+                 // Get the base frame at three contitions.
+                    if ((cur_pos == 0              && accumulate  && representation == RESIDUAL) || // ??
+                        (cur_pos == pos_target - 1 && !accumulate && representation == RESIDUAL) || // ??
+                        cur_pos == pos_target) { //current postion == target position
                         create_and_load_bgr(
                             pFrame, pFrameBGR, buffer, bgr_arr, cur_pos, pos_target);
                     }
 
+
+
+
+               // We compare the final location with the original location
+               // to get accumulated motion vectors (and accumulated residuals).
                     if (representation == MV || 
                         representation == RESIDUAL) {
                         AVFrameSideData *sd;
+
+                        //Return a pointer to the side data of a given type on success.
+                        // NULL if there is no motion vector in this frame.
+
+                        // Motion vectors are stored in frame side data to be used by other filters.
                         sd = av_frame_get_side_data(pFrame, AV_FRAME_DATA_MOTION_VECTORS);
                         if (sd) {
                             if (accumulate || cur_pos == pos_target) {
+                            //Entering create_and_load_mv_residual function
                                 create_and_load_mv_residual(
-                                    sd, 
-                                    *bgr_arr, *mv_arr, *res_arr,
-                                    cur_pos,
-                                    accumulate,
-                                    representation,
-                                    accu_src,
-                                    accu_src_old,
-                                    w,
-                                    h,
-                                    pos_target);
+                                    sd, // pointer to side data
+                                    *bgr_arr, *mv_arr, *res_arr, // arrays for bgr, mv, res
+                                    cur_pos, //current position
+                                    accumulate, // is_accumulated
+                                    representation, // mv/res
+                                    accu_src, // src position in accumulated mode ?
+                                    accu_src_old, // old src position in accumulated mode ?
+                                    w, // pFrame->width
+                                    h, //  pFrame->height
+                                    pos_target); // target position
                             }
                         }
                     }
-                    cur_pos ++;
+                    cur_pos ++; // switch to next position
                 }
             }
         }

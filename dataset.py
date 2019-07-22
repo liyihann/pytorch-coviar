@@ -16,41 +16,13 @@ from coviar import get_num_frames
 from coviar import load
 from transforms import color_aug
 
-
+# each group of pictures (GoP) has 12 frames
 GOP_SIZE = 12
 
 
 def clip_and_scale(img, size):
     return (img * (127.5 / size)).astype(np.int32)
 
-
-def get_seg_range(n, num_segments, seg, representation):
-    if representation in ['residual', 'mv']:
-        n -= 1
-
-    seg_size = float(n - 1) / num_segments
-    seg_begin = int(np.round(seg_size * seg))
-    seg_end = int(np.round(seg_size * (seg+1)))
-    if seg_end == seg_begin:
-        seg_end = seg_begin + 1
-
-    if representation in ['residual', 'mv']:
-        # Exclude the 0-th frame, because it's an I-frmae.
-        return seg_begin + 1, seg_end + 1
-
-    return seg_begin, seg_end
-
-
-def get_gop_pos(frame_idx, representation):
-    gop_index = frame_idx // GOP_SIZE
-    gop_pos = frame_idx % GOP_SIZE
-    if representation in ['residual', 'mv']:
-        if gop_pos == 0:
-            gop_index -= 1
-            gop_pos = GOP_SIZE - 1
-    else:
-        gop_pos = 0
-    return gop_index, gop_pos
 
 
 class CoviarDataSet(data.Dataset):
@@ -78,17 +50,59 @@ class CoviarDataSet(data.Dataset):
         self._load_list(video_list)
 
     def _load_list(self, video_list):
+        # video_list: e.g. ucf101_split1_train.txt
         self._video_list = []
         with open(video_list, 'r') as f:
             for line in f:
+                # ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01.avi ApplyEyeMakeup 0
+                # video = *.avi
+                # label = 0
                 video, _, label = line.strip().split()
                 video_path = os.path.join(self._data_root, video[:-4] + '.mp4')
                 self._video_list.append((
                     video_path,
                     int(label),
                     get_num_frames(video_path)))
+                # get_num_frames, METH_VARARGS, "Getting number of frames in a video."}
+                # _video_list: path(*.avi), label(0), number of frames
 
         print('%d videos loaded.' % len(self._video_list))
+
+
+
+
+
+
+    def get_seg_range(n, num_segments, seg, representation):
+        # n = number of frames
+        # num_segments: number of segments
+        # seg: in range(self._num_segments)
+
+        if representation in ['residual', 'mv']:
+            n -= 1
+
+        seg_size = float(n - 1) / num_segments
+        seg_begin = int(np.round(seg_size * seg))
+        seg_end = int(np.round(seg_size * (seg + 1)))
+        if seg_end == seg_begin:
+            seg_end = seg_begin + 1
+
+        if representation in ['residual', 'mv']:
+            # Exclude the 0-th frame, because it's an I-frmae.
+            return seg_begin + 1, seg_end + 1
+
+        return seg_begin, seg_end
+
+    def get_gop_pos(frame_idx, representation):
+        gop_index = frame_idx // GOP_SIZE
+        gop_pos = frame_idx % GOP_SIZE
+        if representation in ['residual', 'mv']:
+            if gop_pos == 0:
+                gop_index -= 1
+                gop_pos = GOP_SIZE - 1
+        else:
+            gop_pos = 0
+        return gop_index, gop_pos
 
     def _get_train_frame_index(self, num_frames, seg):
         # Compute the range of the segment.
@@ -119,7 +133,6 @@ class CoviarDataSet(data.Dataset):
             representation_idx = 2
         else:
             representation_idx = 0
-
 
         if self._is_train:
             video_path, label, num_frames = random.choice(self._video_list)

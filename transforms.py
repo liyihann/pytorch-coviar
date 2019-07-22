@@ -38,6 +38,8 @@ class GroupCenterCrop(object):
 
 
 class GroupRandomHorizontalFlip(object):
+    """Randomly horizontally flips the given PIL.Image with a probability of 0.5
+    """
     def __init__(self, is_mv=False):
         self._is_mv = is_mv
 
@@ -46,7 +48,7 @@ class GroupRandomHorizontalFlip(object):
             ret = [img[:, ::-1, :].astype(np.int32) for img in img_group]
             if self._is_mv:
                 for i in range(len(ret)):
-                    ret[i] -= 128
+                    ret[i] -= 128  # invert flow pixel values when flipping
                     ret[i][..., 0] *= (-1)
                     ret[i] += 128
             return ret
@@ -55,6 +57,13 @@ class GroupRandomHorizontalFlip(object):
 
 
 class GroupScale(object):
+    """ Rescales the input PIL.Image to the given 'size'.
+    'size' will be the size of the smaller edge.
+    For example, if height > width, then image will be
+    rescaled to (size * height / width, size)
+    size: size of the smaller edge
+    interpolation: Default: PIL.Image.BILINEAR
+    """
     def __init__(self, size):
         self._size = (size, size)
 
