@@ -2,17 +2,15 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1a1cce57-f90d-42ef-8e84-0fff79f6d0c2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/webServers.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../MV-release/.idea/MV-release.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../MV-release/.idea/MV-release.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/pytorch-coviar.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/pytorch-coviar.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/webServers.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/transforms.py" beforeDir="false" afterPath="$PROJECT_DIR$/transforms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../temporal-segment-networks/lib/dense_flow" beforeDir="false" afterPath="$PROJECT_DIR$/../temporal-segment-networks/lib/dense_flow" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../tsn-pytorch/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/../tsn-pytorch/dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../tsn-pytorch/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/../tsn-pytorch/test_models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../tsn-pytorch/transforms.py" beforeDir="false" afterPath="$PROJECT_DIR$/../tsn-pytorch/transforms.py" afterDir="false" />
     </list>
@@ -28,40 +26,6 @@
         <option value="Python Script" />
       </list>
     </option>
-  </component>
-  <component name="FindInProjectRecents">
-    <findStrings>
-      <find>av_frame_get_side_data</find>
-      <find>side</find>
-      <find>side_data</find>
-      <find>dims</find>
-      <find>flow</find>
-      <find>name</find>
-      <find>save</find>
-      <find>ii</find>
-      <find>clock</find>
-      <find>clock</find>
-      <find>t_io</find>
-      <find>filename</find>
-      <find>ucf101_flow_img_mvs</find>
-      <find>im_data_ori</find>
-      <find>load</find>
-      <find>motion</find>
-      <find>resi</find>
-      <find>data_loader</find>
-      <find>crop</find>
-      <find>mv</find>
-      <find>net.input_size</find>
-      <find>input_size</find>
-      <find>crop_size</find>
-      <find>orch.load</find>
-      <find>GroupNormalize</find>
-      <find>normalize</find>
-      <find>resize_mv</find>
-      <find>stack</find>
-      <find>train_augmentation</find>
-      <find>aug</find>
-    </findStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -152,6 +116,7 @@
       <workItem from="1563988786739" duration="1044000" />
       <workItem from="1563991462198" duration="15493000" />
       <workItem from="1564037588648" duration="336000" />
+      <workItem from="1564070779054" duration="13035000" />
     </task>
     <servers />
   </component>
@@ -163,7 +128,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>

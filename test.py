@@ -99,7 +99,13 @@ def main():
             GroupCenterCrop(net.crop_size),
         ])
 
-    # ??? what's difference between net.input_size and net.crop_size?
+    # ??? what's difference between net.input_size and net.crop_size
+
+    # line 70 in model.py
+    #     def crop_size(self):
+    #         return self._input_size
+    # seems they are same here
+
     # -----------------------
     # TSN:
     # elif args.test_crops == 10:
@@ -113,6 +119,10 @@ def main():
         cropping = torchvision.transforms.Compose([
             GroupOverSample(net.crop_size, net.scale_size, is_mv=(args.representation == 'mv'))
         ])
+    # --test-crops specifies how many crops per segment.
+    # The value should be 1 or 10.
+    # 1 means using only one center crop.
+    # 10 means using 5 crops for both (horizontal) flips.
     else:
         raise ValueError("Only 1 and 10 crops are supported, but got {}.".format(args.test_crops))
 
@@ -124,8 +134,13 @@ def main():
             num_segments=args.test_segments,
             representation=args.representation,
             transform=cropping, # seems important to stacking
+            # test_crops == 1: GroupScale + GroupCenterCrop
+            # the same as val_data_loader in train.py
+            # seems np.stack in resize_mv() called in GroupCenterCrop
+            # has the same effects as Stack() in TSN
 
-            # Stack(roll=args.arch == 'BNInception') seems important
+            # test_crops == 10: GroupOverSample
+
 
             # -----------------------
             # TSN:

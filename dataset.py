@@ -18,7 +18,7 @@ from transforms import color_aug
 
 # each group of pictures (GoP) has 12 frames
 GOP_SIZE = 12
-
+MV_STACK_SIZE = 5
 
 def clip_and_scale(img, size):
     return (img * (127.5 / size)).astype(np.int32)
@@ -34,12 +34,12 @@ class CoviarDataSet(data.Dataset):
                  is_train,
                  accumulate):
 
-        self._data_root = data_root
+        self._data_root = data_root # root_path
         self._data_name = data_name
-        self._num_segments = num_segments
-        self._representation = representation
-        self._transform = transform
-        self._is_train = is_train
+        self._num_segments = num_segments # num_segments
+        self._representation = representation # modality
+        self._transform = transform # transform
+        self._is_train = is_train # test_mode
         self._accumulate = accumulate
 
         self._input_mean = torch.from_numpy(
@@ -47,7 +47,7 @@ class CoviarDataSet(data.Dataset):
         self._input_std = torch.from_numpy(
             np.array([0.229, 0.224, 0.225]).reshape((1, 3, 1, 1))).float()
 
-        self._load_list(video_list)
+        self._load_list(video_list) # list_file, _parse_list()
 
     def _load_list(self, video_list):
         # video_list: e.g. ucf101_split1_train.txt
@@ -71,7 +71,8 @@ class CoviarDataSet(data.Dataset):
 
 
 
-
+#   seg_begin, seg_end = self.get_seg_range(num_frames, self._num_segments, seg,
+#                                         represen tation=self._representation)
 
     def get_seg_range(n, num_segments, seg, representation):
         # n = number of frames
@@ -80,6 +81,7 @@ class CoviarDataSet(data.Dataset):
 
         if representation in ['residual', 'mv']:
             n -= 1
+            # exclude the 0-th frame
 
         seg_size = float(n - 1) / num_segments
         seg_begin = int(np.round(seg_size * seg))
@@ -88,30 +90,40 @@ class CoviarDataSet(data.Dataset):
             seg_end = seg_begin + 1
 
         if representation in ['residual', 'mv']:
-            # Exclude the 0-th frame, because it's an I-frmae.
+            # Exclude the 0-th frame, because it's an I-frame.
             return seg_begin + 1, seg_end + 1
 
         return seg_begin, seg_end
 
     def get_gop_pos(frame_idx, representation):
+        # index for sampled single frame
+        # GOP_SIZE = 12     each group of pictures (GoP) has 12 frames
+        # f. Floor Division(//)
+        # Divides and returns the integer value of the quotient.
+        # It dumps the digits after the decimal.
         gop_index = frame_idx // GOP_SIZE
         gop_pos = frame_idx % GOP_SIZE
         if representation in ['residual', 'mv']:
-            if gop_pos == 0:
-                gop_index -= 1
-                gop_pos = GOP_SIZE - 1
-        else:
+            # normally, non-key frames
+            # just compute as above
+            if gop_pos == 0: # I-frame in the group
+                gop_index -= 1 # find index of I-frame in the preceding group
+                gop_pos = GOP_SIZE - 1 # use the last frame in the preceding group
+        else: # I-frame. The key-frame is itself
             gop_pos = 0
         return gop_index, gop_pos
+        # return group index(corresponding I-frame) and position in the group
 
     def _get_train_frame_index(self, num_frames, seg):
         # Compute the range of the segment.
-        seg_begin, seg_end = get_seg_range(num_frames, self._num_segments, seg,
+        # for both I-frame & non I-frame
+        seg_begin, seg_end = self.get_seg_range(num_frames, self._num_segments, seg,
                                                  representation=self._representation)
 
         # Sample one frame from the segment.
+
         v_frame_idx = random.randint(seg_begin, seg_end - 1)
-        return get_gop_pos(v_frame_idx, self._representation)
+        return self.get_gop_pos(v_frame_idx, self._representation)
 
     def _get_test_frame_index(self, num_frames, seg):
         if self._representation in ['mv', 'residual']:
@@ -123,7 +135,7 @@ class CoviarDataSet(data.Dataset):
         if self._representation in ['mv', 'residual']:
             v_frame_idx += 1
 
-        return get_gop_pos(v_frame_idx, self._representation)
+        return self.get_gop_pos(v_frame_idx, self._representation)
 
     def __getitem__(self, index):
 
@@ -141,14 +153,114 @@ class CoviarDataSet(data.Dataset):
 
         frames = []
         for seg in range(self._num_segments):
-
-            if self._is_train:
-                gop_index, gop_pos = self._get_train_frame_index(num_frames, seg)
+            # -----------------------------ORIGINAL_CODE-----------------------------
+            # if self._is_train:
+            #     gop_index, gop_pos = self._get_train_frame_index(num_frames, seg)
+            # else:
+            #     gop_index, gop_pos = self._get_test_frame_index(num_frames, seg)
+            # # returns image of the specified frame
+            # img = load(video_path, gop_index, gop_pos,
+            #            representation_idx, self._accumulate)
+            #
+            # if img is None:
+            #     print('Error: loading video %s failed.' % video_path)
+            #     img = np.zeros((256, 256, 2)) if self._representation == 'mv' else np.zeros((256, 256, 3))
+            # else:
+            #     if self._representation == 'mv':
+            #         img = clip_and_scale(img, 20)
+            #         img += 128
+            #         img = (np.minimum(np.maximum(img, 0), 255)).astype(np.uint8)
+            #     elif self._representation == 'residual':
+            #         img += 128
+            #         img = (np.minimum(np.maximum(img, 0), 255)).astype(np.uint8)
+            #
+            # if self._representation == 'iframe':
+            #     img = color_aug(img)
+            #
+            #     # BGR to RGB. (PyTorch uses RGB according to doc.)
+            #     img = img[..., ::-1]
+            #
+            # frames.append(img)
+            # -----------------------------ORIGINAL_CODE-----------------------------
+            # -----------------------------MODIFIED_CODE-----------------------------
+            # Method 1: frames_length = segnum * 5, sample 5 MV frames randomly
+            if self._representation in ['mv', 'residual']:
+                for i in range(MV_STACK_SIZE):
+                    frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
             else:
-                gop_index, gop_pos = self._get_test_frame_index(num_frames, seg)
+                frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
+            # -----------------------------MODIFIED_CODE-----------------------------
+            # -----------------------------MODIFIED_CODE-----------------------------
+            # Method 2: frames_length = segnum * 5, sample 5 MV frames consecutively
+            if self._representation in ['mv', 'residual']:
+                frames = self.process_segment_consecutive(frames, num_frames, seg, video_path, representation_idx)
+            else:
+                frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
+            # -----------------------------MODIFIED_CODE-----------------------------
+        frames = self._transform(frames)
 
+        frames = np.array(frames)
+
+        # transpose: switch axes of input array
+        # 0->0 3->1 1->2 2->3
+        # just for processing with torch ??
+        frames = np.transpose(frames, (0, 3, 1, 2))
+        input = torch.from_numpy(frames).float() / 255.0
+
+        if self._representation == 'iframe':
+            input = (input - self._input_mean) / self._input_std
+        elif self._representation == 'residual':
+            input = (input - 0.5) / self._input_std
+        elif self._representation == 'mv':
+            input = (input - 0.5)
+
+        return input, label
+
+    def __len__(self):
+        return len(self._video_list)
+
+#################################################################################
+    # -----------------------------MODIFIED_CODE-----------------------------
+    def process_segment_random(self,frames,num_frames,seg,video_path,representation_idx):
+        if self._is_train:
+            gop_index, gop_pos = self._get_train_frame_index(num_frames, seg)
+        else:
+            gop_index, gop_pos = self._get_test_frame_index(num_frames, seg)
+        # returns image of the specified frame
+        img = load(video_path, gop_index, gop_pos,
+                   representation_idx, self._accumulate)
+
+        if img is None:
+            print('Error: loading video %s failed.' % video_path)
+            img = np.zeros((256, 256, 2)) if self._representation == 'mv' else np.zeros((256, 256, 3))
+        else:
+            if self._representation == 'mv':
+                img = clip_and_scale(img, 20)
+                img += 128
+                img = (np.minimum(np.maximum(img, 0), 255)).astype(np.uint8)
+            elif self._representation == 'residual':
+                img += 128
+                img = (np.minimum(np.maximum(img, 0), 255)).astype(np.uint8)
+
+        if self._representation == 'iframe':
+            img = color_aug(img)
+
+            # BGR to RGB. (PyTorch uses RGB according to doc.)
+            img = img[..., ::-1]
+
+        frames.append(img)
+        return frames
+
+    def process_segment_consecutive(self,frames,num_frames,seg,video_path,representation_idx):
+        if self._is_train:
+            gop_index, gop_pos_list = self._get_train_frame_index_consecutive(num_frames, seg)
+        else:
+            gop_index, gop_pos_list = self._get_test_frame_index_consecutive(num_frames, seg)
+        # returns image of the specified frame
+
+        for gop_pos in gop_pos_list:
             img = load(video_path, gop_index, gop_pos,
-                       representation_idx, self._accumulate)
+                   representation_idx, self._accumulate)
 
             if img is None:
                 print('Error: loading video %s failed.' % video_path)
@@ -164,26 +276,44 @@ class CoviarDataSet(data.Dataset):
 
             if self._representation == 'iframe':
                 img = color_aug(img)
-
                 # BGR to RGB. (PyTorch uses RGB according to doc.)
                 img = img[..., ::-1]
-
             frames.append(img)
+        return frames
 
-        frames = self._transform(frames)
+    def get_gop_pos_consecutive(frame_idx, representation):
+        gop_pos_list = []
+        gop_index = frame_idx // GOP_SIZE
+        gop_pos = frame_idx % GOP_SIZE
+        if representation in ['residual', 'mv']:
+            if gop_pos == 0:
+                gop_index -= 1
+                gop_pos = GOP_SIZE - 1
+            if gop_pos <= GOP_SIZE-MV_STACK_SIZE:
+                for i in range(0,MV_STACK_SIZE-1):
+                    gop_pos_list.append(gop_pos+i)
+            else:
+                for i in range(1,MV_STACK_SIZE-(GOP_SIZE-gop_pos)):
+                    gop_pos_list.append(gop_pos-i)
+                gop_pos_list.reverse()
+                for i in range(0,MV_STACK_SIZE-gop_pos_list-1):
+                    gop_pos_list.append(gop_pos+i)
+        else: # dead entrance
+            gop_pos = 0
+            gop_pos_list.append(gop_pos)
+        return gop_index, gop_pos_list
 
-        frames = np.array(frames)
-        frames = np.transpose(frames, (0, 3, 1, 2))
-        input = torch.from_numpy(frames).float() / 255.0
+    def _get_train_frame_index_consecutive(self, num_frames, seg):
+        seg_begin, seg_end = self.get_seg_range(num_frames, self._num_segments, seg,
+                                                 representation=self._representation)
+        v_frame_idx = random.randint(seg_begin, seg_end - 1)
+        return self.get_gop_pos_consecutive(v_frame_idx, self._representation)
 
-        if self._representation == 'iframe':
-            input = (input - self._input_mean) / self._input_std
-        elif self._representation == 'residual':
-            input = (input - 0.5) / self._input_std
-        elif self._representation == 'mv':
-            input = (input - 0.5)
-
-        return input, label
-
-    def __len__(self):
-        return len(self._video_list)
+    def _get_test_frame_index_consecutive(self, num_frames, seg):
+        if self._representation in ['mv', 'residual']:
+            num_frames -= 1
+        seg_size = float(num_frames - 1) / self._num_segments
+        v_frame_idx = int(np.round(seg_size * (seg + 0.5)))
+        if self._representation in ['mv', 'residual']:
+            v_frame_idx += 1
+        return self.get_gop_pos_consecutive(v_frame_idx, self._representation)

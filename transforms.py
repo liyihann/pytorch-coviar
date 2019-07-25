@@ -27,6 +27,14 @@ def color_aug(img, random_h=36, random_l=50, random_s=50):
 
 
 class GroupCenterCrop(object):
+    """ Rescales the input PIL.Image to the given 'size'.
+    'size' will be the size of the smaller edge.
+    For example, if height > width, then image will be
+    rescaled to (size * height / width, size)
+    size: size of the smaller edge
+    interpolation: Default: PIL.Image.BILINEAR
+    """
+
     def __init__(self, size):
         self._size = size
 
@@ -64,11 +72,12 @@ class GroupScale(object):
     size: size of the smaller edge
     interpolation: Default: PIL.Image.BILINEAR
     """
+
     def __init__(self, size):
         self._size = (size, size)
 
     def __call__(self, img_group):
-        if img_group[0].shape[2] == 3:
+        if img_group[0].shape[2] == 3: # RGB
             return [cv2.resize(img, self._size, cv2.INTER_LINEAR) for img in img_group]
         elif img_group[0].shape[2] == 2:
             return [resize_mv(img, self._size, cv2.INTER_LINEAR) for img in img_group]
@@ -100,10 +109,12 @@ class GroupOverSample(object):
         for o_w, o_h in offsets:
             for img in img_group:
 
+                # crop a (crop_size*crop_size) patch from image set
                 crop = img[o_w:o_w+crop_w, o_h:o_h+crop_h]
                 oversample_group.append(crop)
-
+                # flip horizontally
                 flip_crop = crop[:, ::-1, :].astype(np.int32)
+
                 if self._is_mv:
                     assert flip_crop.shape[2] == 2, flip_crop.shape
                     flip_crop -= 128
@@ -116,6 +127,11 @@ class GroupOverSample(object):
 def resize_mv(img, shape, interpolation):
     return np.stack([cv2.resize(img[..., i], shape, interpolation)
                      for i in range(2)], axis=2)
+# numpy.stack
+# numpy.stack(arrays, axis=0, out=None)[source]
+# Join a sequence of arrays along a new axis.
+# The axis parameter specifies the index of the new axis in the dimensions of the result.
+# For example, if axis=0 it will be the first dimension and if axis=-1 it will be the last dimension.
 
 
 class GroupMultiScaleCrop(object):
@@ -134,11 +150,11 @@ class GroupMultiScaleCrop(object):
 
         crop_img_group = [img[offset_w:offset_w + crop_w, offset_h:offset_h + crop_h] for img in img_group]
 
-        if crop_img_group[0].shape[2] == 3:
+        if crop_img_group[0].shape[2] == 3: # RGB
             ret_img_group = [cv2.resize(img, (self.input_size[0], self.input_size[1]),
                                         cv2.INTER_LINEAR)
                              for img in crop_img_group]
-        elif crop_img_group[0].shape[2] == 2:
+        elif crop_img_group[0].shape[2] == 2: # mv
             ret_img_group = [resize_mv(img, (self.input_size[0], self.input_size[1]), cv2.INTER_LINEAR)
                              for img in crop_img_group]
         return ret_img_group
@@ -194,3 +210,5 @@ class GroupMultiScaleCrop(object):
             ret.append((3 * w_step, 3 * h_step))  # lower righ quarter
 
         return ret
+
+####################

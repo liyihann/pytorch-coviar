@@ -60,6 +60,12 @@ def main():
             num_segments=args.num_segments,
             representation=args.representation,
             transform=model.get_augmentation(),
+            # get_augmentation() =
+            # GroupMultiScaleCrop + GroupRandomHorizontalFlip
+            # GroupMultiScaleCrop contains stack mv
+
+            # seems np.stack in resize_mv() called in GroupMultiScaleCrop
+            # has the same effects as Stack() in TSN
 
             # -----------------------
             # TSN:
@@ -67,7 +73,7 @@ def main():
             #     train_augmentation,                       # train_augmentation = model.get_augmentation(), same
             #     Stack(roll=args.arch == 'BNInception'),   # this line seems important
             #     ToTorchFormatTensor(div=args.arch != 'BNInception'),
-            #     normalize,
+            #     normalize, # used for RGBDiff
             # ])),
             # -----------------------
 
@@ -87,7 +93,10 @@ def main():
             transform=torchvision.transforms.Compose([  # seems important to stacking
                 GroupScale(int(model.scale_size)),
                 GroupCenterCrop(model.crop_size), # here they both use model.crop_size (instead of TSN's net.input_size in test_model.py)
-                ]),
+                ]),# this function contains stack
+
+            # seems np.stack in resize_mv() called in GroupCenterCrop
+            # has the same effects as Stack() in TSN
 
             # -----------------------
             # TSN:
