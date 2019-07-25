@@ -25,12 +25,29 @@ parser.add_argument('--test-list', type=str)
 parser.add_argument('--weights', type=str)
 parser.add_argument('--arch', type=str)
 parser.add_argument('--save-scores', type=str, default=None)
+
 parser.add_argument('--test_segments', type=int, default=25)
+# --test-segments specifies how many segments to sample in a "TSN (temporal segment network)".
+# Many recent papers calculate the video-level prediction as the average of 25 frame-level predictions
+# (the 25 frames are sampled uniformly in a video).
+# So we follow and set the default as 25 here.
+
 parser.add_argument('--test-crops', type=int, default=10)
+# --test-crops specifies how many crops per segment.
+# The value should be 1 or 10.
+# 1 means using only one center crop.
+# 10 means using 5 crops for both (horizontal) flips.
+
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('-j', '--workers', default=1, type=int, metavar='N',
                     help='number of workers for data loader.')
 parser.add_argument('--gpus', nargs='+', type=int, default=None)
+
+
+
+
+
+
 
 args = parser.parse_args()
 
@@ -42,20 +59,56 @@ else:
     raise ValueError('Unknown dataset '+args.data_name)
 
 def main():
+    # load trained model
+
+    '''
+    @Param
+    num_class: total number of classes
+    num_segments: number of TSN segments, test default = 25
+    representation: iframe, mv, residual
+    base_model: base architecture
+    '''
     net = Model(num_class, args.test_segments, args.representation,
                 base_model=args.arch)
 
+    # checkpoint trained model ? (not best model
     checkpoint = torch.load(args.weights)
     print("model epoch {} best prec@1: {}".format(checkpoint['epoch'], checkpoint['best_prec1']))
 
     base_dict = {'.'.join(k.split('.')[1:]): v for k,v in list(checkpoint['state_dict'].items())}
     net.load_state_dict(base_dict)
 
+
+    # -----------------------
+    # CLASS torchvision.transforms.Compose(transforms)[SOURCE]
+    # Composes several transforms together.
+    # Parameters: transforms (list of Transform objects) – list of transforms to compose.
+    # -----------------------
+
+    # -----------------------
+    # TSN:
+    # if args.test_crops == 1:
+    #     cropping = torchvision.transforms.Compose([
+    #         GroupScale(net.scale_size),
+    #         GroupCenterCrop(net.input_size),
+    #     ])
+    # -----------------------
     if args.test_crops == 1:
         cropping = torchvision.transforms.Compose([
             GroupScale(net.scale_size),
             GroupCenterCrop(net.crop_size),
         ])
+
+    # ??? what's difference between net.input_size and net.crop_size?
+    # -----------------------
+    # TSN:
+    # elif args.test_crops == 10:
+    #     cropping = torchvision.transforms.Compose([
+    #         GroupOverSample(net.input_size, net.scale_size)
+    #     ])
+    # -----------------------
+
+    # is_mv=(args.representation == 'mv') seems quite important
     elif args.test_crops == 10:
         cropping = torchvision.transforms.Compose([
             GroupOverSample(net.crop_size, net.scale_size, is_mv=(args.representation == 'mv'))
@@ -70,7 +123,21 @@ def main():
             video_list=args.test_list,
             num_segments=args.test_segments,
             representation=args.representation,
-            transform=cropping,
+            transform=cropping, # seems important to stacking
+
+            # Stack(roll=args.arch == 'BNInception') seems important
+
+            # -----------------------
+            # TSN:
+            # transform=torchvision.transforms.Compose([
+            #     cropping,
+            #     Stack(roll=args.arch == 'BNInception'),       # this line seems important
+            #     ToTorchFormatTensor(div=args.arch != 'BNInception'),
+            #     GroupNormalize(net.input_mean, net.input_std),
+            # ])),
+            # -----------------------
+
+
             is_train=False,
             accumulate=(not args.no_accumulation),
             ),

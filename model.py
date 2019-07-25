@@ -84,3 +84,11 @@ Initializing model:
         return torchvision.transforms.Compose(
             [GroupMultiScaleCrop(self._input_size, scales),
              GroupRandomHorizontalFlip(is_mv=(self._representation == 'mv'))])
+
+    # seems the same as TSN
+    # -----------------------
+    # TSN:
+    # elif self.modality == 'Flow':
+    # return torchvision.transforms.Compose([GroupMultiScaleCrop(self.input_size, [1, .875, .75]),
+    #                                        GroupRandomHorizontalFlip(is_flow=True)])
+    # -----------------------

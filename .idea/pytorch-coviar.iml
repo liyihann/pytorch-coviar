@@ -5,6 +5,9 @@
     <orderEntry type="jdk" jdkName="Remote Python 3.6.8 (sftp://liyihan@tigger.cs.ucsb.edu:22/home/liyihan/anaconda3/envs/coviar/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="tsn-pytorch" />
+    <orderEntry type="module" module-name="tsn-pytorch" />
+    <orderEntry type="module" module-name="temporal-segment-networks" />
+    <orderEntry type="module" module-name="MV-release" />
   </component>
   <component name="TestRunnerService">
     <option name="PROJECT_TEST_RUNNER" value="Unittests" />

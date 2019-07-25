@@ -36,30 +36,22 @@ def main():
     else:
         raise ValueError('Unknown dataset '+ args.data_name)
 
-    '''
-    @Param
-    num_class: total number of classes
-    num_segments: number of TSN segments, default=3
-    representation: iframe, mv, residual
-    base_model: base architecture
-    '''
+    # num_class: total number of classes
+    # num_segments: number of TSN segments, default=3
+    # representation: iframe, mv, residual
+    # base_model: base architecture
+
     model = Model(num_class, args.num_segments, args.representation,
                   base_model=args.arch)
     print(model)
 
-    '''
-    @Param
-    dataset (Dataset) – dataset from which to load the data.
-    
-    batch_size – how many samples per batch to load (default: 1).
-    
-    shuffle – set to True to have the data reshuffled at every epoch.
-    
-    num_workers – how many subprocesses to use for data loading. 0 means that the data will be loaded in the main process. (default: 0)
-    
-    pin_memory – If True, the data loader will copy tensors into CUDA pinned memory before returning them.
-    
-    '''
+
+    # dataset (Dataset) – dataset from which to load the data.
+    # batch_size – how many samples per batch to load (default: 1).
+    # shuffle – set to True to have the data reshuffled at every epoch.
+    # num_workers – how many subprocesses to use for data loading. 0 means that the data will be loaded in the main process. (default: 0)
+    # pin_memory – If True, the data loader will copy tensors into CUDA pinned memory before returning them.
+
     train_loader = torch.utils.data.DataLoader(
         CoviarDataSet(
             args.data_root,
@@ -68,6 +60,17 @@ def main():
             num_segments=args.num_segments,
             representation=args.representation,
             transform=model.get_augmentation(),
+
+            # -----------------------
+            # TSN:
+            # transform=torchvision.transforms.Compose([
+            #     train_augmentation,                       # train_augmentation = model.get_augmentation(), same
+            #     Stack(roll=args.arch == 'BNInception'),   # this line seems important
+            #     ToTorchFormatTensor(div=args.arch != 'BNInception'),
+            #     normalize,
+            # ])),
+            # -----------------------
+
             is_train=True,
             accumulate=(not args.no_accumulation),
             ),
@@ -81,13 +84,26 @@ def main():
             video_list=args.test_list,
             num_segments=args.num_segments,
             representation=args.representation,
-            transform=torchvision.transforms.Compose([
+            transform=torchvision.transforms.Compose([  # seems important to stacking
                 GroupScale(int(model.scale_size)),
-                GroupCenterCrop(model.crop_size),
+                GroupCenterCrop(model.crop_size), # here they both use model.crop_size (instead of TSN's net.input_size in test_model.py)
                 ]),
+
+            # -----------------------
+            # TSN:
+            # transform=torchvision.transforms.Compose([
+            #     GroupScale(int(scale_size)),
+            #     GroupCenterCrop(crop_size),
+            #     Stack(roll=args.arch == 'BNInception'),       # this line seems important
+            #     ToTorchFormatTensor(div=args.arch != 'BNInception'),
+            #     normalize,
+            # ])),
+            # -----------------------
+
             is_train=False,
             accumulate=(not args.no_accumulation),
             ),
+
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
