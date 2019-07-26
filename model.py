@@ -5,6 +5,8 @@ from transforms import GroupMultiScaleCrop
 from transforms import GroupRandomHorizontalFlip
 import torchvision
 
+MV_STACK_SIZE = 5
+
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
@@ -44,15 +46,32 @@ Initializing model:
 
         feature_dim = getattr(self.base_model, 'fc').in_features
         setattr(self.base_model, 'fc', nn.Linear(feature_dim, num_class))
-
         if self._representation == 'mv':
             setattr(self.base_model, 'conv1',
-                    nn.Conv2d(2, 64,
+                    # Conv2d:
+                    #     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                    #                  padding=0, dilation=1, groups=1,
+                    #                  bias=True, padding_mode='zeros'):
+
+                    # concatenate mv stack on 3-th axis(x/y info)
+                    # and change in_channels here from 2 to 2*MV_STACK_SIZE
+
+            # -----------------------------ORIGINAL_CODE_START-----------------------------
+            #         nn.Conv2d(2, 64,
+            #                   kernel_size=(7, 7),
+            #                   stride=(2, 2),
+            #                   padding=(3, 3),
+            #                   bias=False))
+            # self.data_bn = nn.BatchNorm2d(2)
+            # -----------------------------ORIGINAL_CODE_END-------------------------------
+            # -----------------------------MODIFIED_CODE_START-----------------------------
+                    nn.Conv2d(2*MV_STACK_SIZE, 64,
                               kernel_size=(7, 7),
                               stride=(2, 2),
                               padding=(3, 3),
                               bias=False))
-            self.data_bn = nn.BatchNorm2d(2)
+            self.data_bn = nn.BatchNorm2d(2*MV_STACK_SIZE)
+            # -----------------------------MODIFIED_CODE_END-------------------------------
         if self._representation == 'residual':
             self.data_bn = nn.BatchNorm2d(3)
 

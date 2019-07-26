@@ -63,3 +63,37 @@ nohup python train.py --lr 0.01 --batch-size 30 --arch resnet18 \
  	--lr-steps 150 270 390  --epochs 510 \
  	--gpus 0 &
 '''
+
+'''
+python train.py --lr 0.01 --batch-size 30 --arch resnet18 \
+ 	--data-name ucf101 --representation mv \
+ 	--data-root data/ucf101/mpeg4_videos \
+ 	--train-list data/datalists/ucf101_split1_train.txt \
+ 	--test-list data/datalists/ucf101_split1_test.txt \
+ 	--model-prefix ucf101_mv_model \
+ 	--lr-steps 150 270 390  --epochs 510 \
+ 	--gpus 0 &
+
+python train.py --lr 0.01 --batch-size 40 --arch resnet18 \
+ 	--data-name ucf101 --representation mv \
+ 	--data-root data/ucf101/mpeg4_videos \
+ 	--train-list data/datalists/ucf101_split1_train.txt \
+ 	--test-list data/datalists/ucf101_split1_test.txt \
+ 	--model-prefix ucf101_mv_model \
+ 	--lr-steps 150 270 390  --epochs 510 \
+ 	--gpus 0 &
+'''
+
+'''
+# I-frame model.
+python train.py --lr 0.0003 --batch-size 1 --arch resnet152 \
+ 	--data-name ucf101 --representation iframe \
+ 	--data-root data/ucf101/mpeg4_videos \
+ 	--train-list data/datalists/ucf101_split1_train.txt \
+ 	--test-list data/datalists/ucf101_split1_test.txt \
+ 	--model-prefix ucf101_iframe_model \
+ 	--lr-steps 150 270 390  --epochs 510 \
+ 	--gpus 0
+
+'''
+
