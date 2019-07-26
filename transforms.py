@@ -53,6 +53,8 @@ class GroupRandomHorizontalFlip(object):
 
     def __call__(self, img_group, is_mv=False):
         if random.random() < 0.5:
+            # input_frame:height * width * 3(RGB_channels)
+            # img[:, ::-1, :]  flip horizontally
             ret = [img[:, ::-1, :].astype(np.int32) for img in img_group]
             if self._is_mv:
                 for i in range(len(ret)):
@@ -124,15 +126,39 @@ class GroupOverSample(object):
 
         return oversample_group
 
+#          ret_img_group = [resize_mv(img, (self.input_size[0], self.input_size[1]), cv2.INTER_LINEAR)
+#                              for img in crop_img_group]
+
+# mv image:
 def resize_mv(img, shape, interpolation):
     return np.stack([cv2.resize(img[..., i], shape, interpolation)
                      for i in range(2)], axis=2)
+
+# stack()函数的原型是numpy.stack(arrays, axis=0)，即将一堆数组的数据按照指定的维度进行堆叠。
+# axis=2, 在第三维度进行堆叠。即若原数组为3*4*5，两个数组堆叠，结果为 3*4*2*5
+
+# stack: ([img0,img1],axis=2)
+# -> height * width * 2 * channels
+
+#  cv::INTER_LINEAR = 1
+
+# img: h * w * 2(channels, R(x) & G(y))
+# stack: np.stack(([h1,w1,c1,0], [h2,w2,c2,1]),axis=2)
+
+# for i in range(2): resize images of x-mv and y-mv respectively
+# after resizing two images(x-channel and y-channel), stack them together
 # numpy.stack
 # numpy.stack(arrays, axis=0, out=None)[source]
 # Join a sequence of arrays along a new axis.
 # The axis parameter specifies the index of the new axis in the dimensions of the result.
 # For example, if axis=0 it will be the first dimension and if axis=-1 it will be the last dimension.
-
+#
+# Parameters:
+            # arrays : sequence of array_like           Each array must have the same shape.
+            # axis : int, optional                      The axis in the result array along which the input arrays are stacked.
+            # out : ndarray, optional                   If provided, the destination to place the result. The shape must be correct, matching that of what stack would have returned if no out argument were specified.
+# Returns:
+            #  stacked : ndarray                        The stacked array has one more dimension than the input arrays.
 
 class GroupMultiScaleCrop(object):
     def __init__(self, input_size, scales=None, max_distort=1, fix_crop=False, more_fix_crop=True):
@@ -144,25 +170,38 @@ class GroupMultiScaleCrop(object):
 
     def __call__(self, img_group):
 
-        im_size = img_group[0].shape
+        im_size = img_group[0].shape # a tuple of number of rows, columns and channels
+                                    #  If image is grayscale, tuple returned contains only number of rows and columns.
+        # img.shape returns (Height, Width, Number of Channels)
+        # height = img.shape[0]
+        # width = img.shape[1]
+        # number_of_channels = img.shape[2]
 
         crop_w, crop_h, offset_w, offset_h = self._sample_crop_size(im_size)
 
+        # crop images
         crop_img_group = [img[offset_w:offset_w + crop_w, offset_h:offset_h + crop_h] for img in img_group]
 
+        # resize images
         if crop_img_group[0].shape[2] == 3: # RGB
+                            # cv2.resize(src, dsize[, dst[, fx[, fy[, interpolation]]]])
+                            # Syntax: cv2.resize(image,(width,height))
             ret_img_group = [cv2.resize(img, (self.input_size[0], self.input_size[1]),
                                         cv2.INTER_LINEAR)
                              for img in crop_img_group]
         elif crop_img_group[0].shape[2] == 2: # mv
+            # In a motion vector image
+            # we assume the x motion is stored in the red channel
+            # and the y value is store in the green channel.
             ret_img_group = [resize_mv(img, (self.input_size[0], self.input_size[1]), cv2.INTER_LINEAR)
                              for img in crop_img_group]
         return ret_img_group
 
     def _sample_crop_size(self, im_size):
-        image_w, image_h = im_size[0], im_size[1]
+        # compute crop size
+        image_w, image_h = im_size[0], im_size[1] # width & height of input images(frames)
 
-        base_size = min(image_w, image_h)
+        base_size = min(image_w, image_h)  # use the length of the shorter edge
         crop_sizes = [int(base_size * x) for x in self.scales]
         crop_h = [self.input_size[1] if abs(x - self.input_size[1]) < 3 else x for x in crop_sizes]
         crop_w = [self.input_size[0] if abs(x - self.input_size[0]) < 3 else x for x in crop_sizes]
@@ -170,7 +209,7 @@ class GroupMultiScaleCrop(object):
         pairs = []
         for i, h in enumerate(crop_h):
             for j, w in enumerate(crop_w):
-                if abs(i - j) <= self.max_distort:
+                if abs(i - j) <= self.max_distort: # default max_distort = 1
                     pairs.append((w, h))
 
         crop_pair = random.choice(pairs)

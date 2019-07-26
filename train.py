@@ -75,7 +75,7 @@ def main():
             #     ToTorchFormatTensor(div=args.arch != 'BNInception'),
             #     normalize, # used for RGBDiff
             # ])),
-            # -----------------------
+            # ----------------------
 
             is_train=True,
             accumulate=(not args.no_accumulation),

@@ -184,11 +184,11 @@ class CoviarDataSet(data.Dataset):
             # -----------------------------ORIGINAL_CODE-----------------------------
             # -----------------------------MODIFIED_CODE-----------------------------
             # Method 1: frames_length = segnum * 5, sample 5 MV frames randomly
-            if self._representation in ['mv', 'residual']:
-                for i in range(MV_STACK_SIZE):
-                    frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
-            else:
-                frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
+            # if self._representation in ['mv', 'residual']:
+            #     for i in range(MV_STACK_SIZE):
+            #         frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
+            # else:
+            #     frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
             # -----------------------------MODIFIED_CODE-----------------------------
             # -----------------------------MODIFIED_CODE-----------------------------
             # Method 2: frames_length = segnum * 5, sample 5 MV frames consecutively
@@ -197,16 +197,48 @@ class CoviarDataSet(data.Dataset):
             else:
                 frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
             # -----------------------------MODIFIED_CODE-----------------------------
+        # frames:   before transform:
+        # RGB: num_seg(3) * height * width * num_channel(3,RGB)
+        # MV: (num_seg3*stack_size5) * height * width * num_channel(2,R/G,x/y)
         frames = self._transform(frames)
+        # after transform:
+        # RGB frames: 1. crop each frame image  2. resize each frame image  3.  flip horizontally for each frame image
+        #               the dimension, number and type of elements of frames is still the same
+        # MV frames:  1. crop each frame image  2. resize each frame image, stack x-channel and y-channel together 3.  flip horizontally for each frame image
+        #               the output array has one more dimension than the input array
+
+        # RGB: num_seg(3) * height * width * num_channel(3,RGB)
+        # MV: (num_seg3*stack_size5) * height * width * 2 * channels(2,RG)  ???     # a little confusing here
 
         frames = np.array(frames)
+        # each element in frames: height * width * num_channel(3,RGB)
+        # RGB frames: 3 RGB frames total for a single video
+        # -----------------------------MODIFIED_CODE-----------------------------
+        frame_stack = []
+        frame_mv = frames
+        if self._representation in ['mv', 'residual']:
+            for seg in range(self._num_segments):
+                frame_stack.append(frame_mv[:MV_STACK_SIZE])
+                frame_mv = frame_mv[MV_STACK_SIZE:]
+
+        np.stack([stack for stack in frame_stack], axis=1) # stacking frames
+
+        # frame_stack: num_seg(3) * stack_size(5) * height * width * channels(2,RG)   ??
+
+        # -----------------------------MODIFIED_CODE-----------------------------
 
         # transpose: switch axes of input array
         # 0->0 3->1 1->2 2->3
         # just for processing with torch ??
+        # RGB: num_seg * num_channel * height * width ??
         frames = np.transpose(frames, (0, 3, 1, 2))
-        input = torch.from_numpy(frames).float() / 255.0
 
+        # Convert image and label to torch tensors
+        input = torch.from_numpy(frames).float() / 255.0
+        # torch.from_numpy(ndarray) → Tensor        Creates a Tensor from a numpy.ndarray.
+        # The returned tensor and ndarray share the same memory.
+        # Modifications to the tensor will be reflected in the ndarray and vice versa.
+        # The returned tensor is not resizable.
         if self._representation == 'iframe':
             input = (input - self._input_mean) / self._input_std
         elif self._representation == 'residual':
