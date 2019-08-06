@@ -21,6 +21,8 @@ GOP_SIZE = 12
 
 MV_STACK_SIZE = 5
 
+TEST_CROP_SIZE= 1
+
 def clip_and_scale(img, size):
 
     return (img * (127.5 / size)).astype(np.int32)
@@ -40,7 +42,7 @@ def get_seg_range(n, num_segments, seg, representation):
         seg_end = seg_begin + 1
 
     if representation in ['residual', 'mv']:
-        # Exclude the 0-th frame, because it's an I-frmae.
+        # Exclude the 0-th frame, because it's an I-frame.
         return seg_begin + 1, seg_end + 1
 
     return seg_begin, seg_end
@@ -202,7 +204,7 @@ class CoviarDataSet(data.Dataset):
             # frames.append(img)
             # -----------------------------ORIGINAL_CODE_END-------------------------------
             # -----------------------------MODIFIED_CODE_START-----------------------------
-            # Original metho: single MV
+            # Original method: single MV
             # frames = self.process_segment_random(frames, num_frames, seg, video_path, representation_idx)
             # -----------------------------MODIFIED_CODE_END-------------------------------
             # -----------------------------MODIFIED_CODE_START-----------------------------
@@ -239,23 +241,53 @@ class CoviarDataSet(data.Dataset):
         # RGB frames: 3 RGB frames total for a single video
         # -----------------------------MODIFIED_CODE_START-----------------------------
         # print("before stacking")
-        # print(frames.shape)       # (15, 224, 224, 2)
-        frame_stack = []
-        frame_mv = frames
-        if self._representation in ['mv', 'residual']:
-            for seg in range(self._num_segments):
-                frame_stack.append(frame_mv[:MV_STACK_SIZE])
-                frame_mv = frame_mv[MV_STACK_SIZE:]
-                # frame_stack: 5 * 224 * 224 * 2
-            # frame_stack = np.array(frame_stack)
-            # print(frame_stack.shape)          # (3, 5, 224, 224, 2)
-            frame_stack = np.transpose(frame_stack, (1,0,2,3,4))
-            frames = np.concatenate([stack for stack in frame_stack], axis=3)
-            # print(frames.shape) # 3 * 224 * 224 * 10
+        # print("frames.shape:"+str(frames.shape))      # training (15, 224, 224, 2)
+                                    # testing: original code, num_segments = 25, test-crop = 10,  frames:(250, 224, 224, 2)
+                                    # testing: newcode frames: (250, 224, 224, 2)
+        if MV_STACK_SIZE > 1:
+            frame_stack = []
+            frame_mv = frames
 
-            # frames = np.stack([stack for stack in frame_stack], axis=1) # stacking frames # (5, 3, 224, 224, 2)
-            # frames = np.mean(frames, axis=1) # compute mean for each frame in one single stack
-            # frames = np.concatenate([stack for stack in frame_stack], axis=3)  # concatenating frames
+            if self._is_train:
+                if self._representation in ['mv', 'residual']:
+                    for seg in range(self._num_segments):
+                        frame_stack.append(frame_mv[:MV_STACK_SIZE])
+                        frame_mv = frame_mv[MV_STACK_SIZE:]
+                    # frame_stack: 5 * 224 * 224 * 2
+                # frame_stack = np.array(frame_stack)
+                # print(frame_stack.shape)          # (3, 5, 224, 224, 2)
+                    frame_stack = np.transpose(frame_stack, (1,0,2,3,4)) # (5, 3, 224, 224, 2)
+                    # frames = np.concatenate([stack for stack in frame_stack], axis=3)
+
+                    frames = np.mean([stack for stack in frame_stack], axis=0)
+                # print(frames.shape) # testing (25, 224, 224, 10)
+                # print(frames.shape) # training 3 * 224 * 224 * 10
+            else:
+                if self._representation in ['mv', 'residual']:
+                    for seg in range(self._num_segments*TEST_CROP_SIZE):
+                        frame_stack.append(frame_mv[:MV_STACK_SIZE])
+                        frame_mv = frame_mv[MV_STACK_SIZE:]
+                        # print("seg:"+str(seg.__index__()))
+                        # frame_stack = np.array(frame_stack)
+                        # print("frame_stack:" + str(frame_stack.shape))
+                        # frame_mv = np.array(frame_mv)
+                        # print("frame_mv:" + str(frame_mv.shape))
+
+                    # frame_stack = np.array(frame_stack)
+                    # print("frame_stack:"+str(frame_stack.shape)) # frame_stack:(250,)
+                    # single, crop10: frame_stack: (250, 1, 224, 224, 2)
+
+                    frame_stack = np.transpose(frame_stack, (1,0,2,3,4))
+                    frames = np.concatenate([stack for stack in frame_stack], axis=3)
+
+            # print("frames.shape:"+str(frames.shape))
+            # single, crop10: frames.shape: (250, 224, 224, 2)
+
+            # testing frames:shape (25, 224, 224, 2)
+
+                # frames = np.stack([stack for stack in frame_stack], axis=1) # stacking frames # (5, 3, 224, 224, 2)
+                # frames = np.mean(frames, axis=1) # compute mean for each frame in one single stack
+                # frames = np.concatenate([stack for stack in frame_stack], axis=3)  # concatenating frames
         # -----------------------------MODIFIED_CODE_END-------------------------------
         # -----------------------------ORIGINAL_CODE_START-----------------------------
         # transpose: switch axes of input array

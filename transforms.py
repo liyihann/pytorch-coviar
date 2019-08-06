@@ -250,4 +250,3 @@ class GroupMultiScaleCrop(object):
 
         return ret
 
-####################

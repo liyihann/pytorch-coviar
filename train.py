@@ -45,7 +45,6 @@ def main():
                   base_model=args.arch)
     print(model)
 
-
     # dataset (Dataset) – dataset from which to load the data.
     # batch_size – how many samples per batch to load (default: 1).
     # shuffle – set to True to have the data reshuffled at every epoch.
@@ -179,12 +178,18 @@ def train(train_loader, model, criterion, optimizer, epoch, cur_lr):
         # measure data loading time
         data_time.update(time.time() - end)
 
+        # print(input.shape) # torch.Size([40, 3, 10, 224, 224])
+
         target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
         # compute output
         output = model(input_var)
+        # -----------------------------MODIFIED_CODE_START-------------------------------
+        # print("output: "+str(output.shape))
+        # -----------------------------MODIFIED_CODE_END---------------------------------
+
         output = output.view((-1, args.num_segments) + output.size()[1:])
         output = torch.mean(output, dim=1)
 

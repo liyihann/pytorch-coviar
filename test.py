@@ -14,6 +14,9 @@ from transforms import GroupCenterCrop
 from transforms import GroupOverSample
 from transforms import GroupScale
 
+MV_STACK_SIZE = 5
+
+
 parser = argparse.ArgumentParser(
     description="Standard video-level testing")
 parser.add_argument('--data-name', type=str, choices=['ucf101', 'hmdb51'])
@@ -32,7 +35,12 @@ parser.add_argument('--test_segments', type=int, default=25)
 # (the 25 frames are sampled uniformly in a video).
 # So we follow and set the default as 25 here.
 
-parser.add_argument('--test-crops', type=int, default=10)
+# -----------------------------ORIGINAL_CODE_START-----------------------------
+# parser.add_argument('--test-crops', type=int, default=10)
+# -----------------------------ORIGINAL_CODE_START-----------------------------
+# -----------------------------MODIFIED_CODE_START-----------------------------
+parser.add_argument('--test-crops', type=int, default=1)
+# -----------------------------MODIFIED_CODE_END-------------------------------
 # --test-crops specifies how many crops per segment.
 # The value should be 1 or 10.
 # 1 means using only one center crop.
@@ -42,12 +50,6 @@ parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('-j', '--workers', default=1, type=int, metavar='N',
                     help='number of workers for data loader.')
 parser.add_argument('--gpus', nargs='+', type=int, default=None)
-
-
-
-
-
-
 
 args = parser.parse_args()
 
@@ -71,10 +73,13 @@ def main():
     net = Model(num_class, args.test_segments, args.representation,
                 base_model=args.arch)
 
+    # -----------------------------MODIFIED_CODE_START-------------------------------
+    # print(net)
+    # -----------------------------MODIFIED_CODE_END---------------------------------
+
     # checkpoint trained model ? (not best model
     checkpoint = torch.load(args.weights)
     print("model epoch {} best prec@1: {}".format(checkpoint['epoch'], checkpoint['best_prec1']))
-
     base_dict = {'.'.join(k.split('.')[1:]): v for k,v in list(checkpoint['state_dict'].items())}
     net.load_state_dict(base_dict)
 
@@ -141,7 +146,6 @@ def main():
 
             # test_crops == 10: GroupOverSample
 
-
             # -----------------------
             # TSN:
             # transform=torchvision.transforms.Compose([
@@ -151,13 +155,16 @@ def main():
             #     GroupNormalize(net.input_mean, net.input_std),
             # ])),
             # -----------------------
-
-
             is_train=False,
             accumulate=(not args.no_accumulation),
             ),
         batch_size=1, shuffle=False,
-        num_workers=args.workers * 2, pin_memory=True)
+        # -----------------------------ORIGINAL_CODE_START-----------------------------
+        # num_workers=args.workers * 2, pin_memory=True)
+        # -----------------------------ORIGINAL_CODE_END-------------------------------
+        # -----------------------------MODIFIED_CODE_START-----------------------------
+        num_workers=args.workers, pin_memory=True)
+        # -----------------------------MODIFIED_CODE_END-------------------------------
 
     if args.gpus is not None:
         devices = [args.gpus[i] for i in range(args.workers)]
@@ -171,12 +178,40 @@ def main():
 
     total_num = len(data_loader.dataset)
     output = []
-
     def forward_video(data):
+        # torch.Size([batch_size, num_segment, 2*MV_STACK_SIZE, height, width])
+        # -----------------------------MODIFIED_CODE_START-------------------------------
+        # print("data.shape"+str(data.shape)) # testing: torch.Size([1, 25, 10, 224, 224])
+                            # training: torch.Size([40, 3, 10, 224, 224])
+                            # original:data.shape:torch.Size([1, 250, 2, 224, 224])
+        # so it seems that the format of input data in this function is not correct
+        # -----------------------------MODIFIED_CODE_END---------------------------------
+
         input_var = torch.autograd.Variable(data, volatile=True)
+
+        # -----------------------------MODIFIED_CODE_START-------------------------------
+        # print("input_var:"+str(input_var.shape)) # input_var:torch.Size([1, 25, 10, 224, 224])
+                                                    # original: input_var.shape:torch.Size([1, 250, 2, 224, 224])
+        # -----------------------------MODIFIED_CODE_END---------------------------------
+
+        # compute output
         scores = net(input_var)
+
+        # -----------------------------MODIFIED_CODE_START-------------------------------
+        # torch.Size([batch_size*num_segment, num_class])
+        # print("scores: "+str(scores.shape)) # testing:  torch.Size([25, 101])
+                                            # training: torch.Size([120, 101])
+
+        # print("scores.size()")
+        # print(scores.size()) # torch.Size([25, 101])
+        # -----------------------------MODIFIED_CODE_END---------------------------------
+
+        # what does args.test_segments * args.test_crops mean??
+        # view(*shape) → Tensor: Returns a new tensor with the same data as the self tensor but of a different shape.
+        # Parameters    shape (torch.Size or int...) – the desired size
         scores = scores.view((-1, args.test_segments * args.test_crops) + scores.size()[1:])
         scores = torch.mean(scores, dim=1)
+
         return scores.data.cpu().numpy().copy()
 
 
@@ -184,6 +219,7 @@ def main():
 
 
     for i, (data, label) in data_gen:
+
         video_scores = forward_video(data)
         output.append((video_scores, label[0]))
         cnt_time = time.time() - proc_start_time
