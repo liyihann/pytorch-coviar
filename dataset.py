@@ -257,9 +257,9 @@ class CoviarDataSet(data.Dataset):
                 # frame_stack = np.array(frame_stack)
                 # print(frame_stack.shape)          # (3, 5, 224, 224, 2)
                     frame_stack = np.transpose(frame_stack, (1,0,2,3,4)) # (5, 3, 224, 224, 2)
-                    # frames = np.concatenate([stack for stack in frame_stack], axis=3)
+                    frames = np.concatenate([stack for stack in frame_stack], axis=3)
 
-                    frames = np.mean([stack for stack in frame_stack], axis=0)
+                    # frames = np.mean([stack for stack in frame_stack], axis=0)
                 # print(frames.shape) # testing (25, 224, 224, 10)
                 # print(frames.shape) # training 3 * 224 * 224 * 10
             else:
@@ -279,6 +279,8 @@ class CoviarDataSet(data.Dataset):
 
                     frame_stack = np.transpose(frame_stack, (1,0,2,3,4))
                     frames = np.concatenate([stack for stack in frame_stack], axis=3)
+
+                    # frames = np.mean([stack for stack in frame_stack], axis=0)
 
             # print("frames.shape:"+str(frames.shape))
             # single, crop10: frames.shape: (250, 224, 224, 2)

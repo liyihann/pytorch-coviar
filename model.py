@@ -5,7 +5,7 @@ from transforms import GroupMultiScaleCrop
 from transforms import GroupRandomHorizontalFlip
 import torchvision
 
-MV_STACK_SIZE = 1
+MV_STACK_SIZE = 5
 
 class Flatten(nn.Module):
     def __init__(self):

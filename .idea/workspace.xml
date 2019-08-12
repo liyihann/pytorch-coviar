@@ -2,18 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1a1cce57-f90d-42ef-8e84-0fff79f6d0c2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/training_ucf101_mv_consecutive_5_bs40_accumulated.out" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ucf101_mv_model_mv_consecutive_5_checkpoint.pth.tar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ucf101_mv_model_mv_model_consecutive_5_best.pth.tar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../MV-release/.idea/MV-release.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../MV-release/.idea/MV-release.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/combine.py" beforeDir="false" afterPath="$PROJECT_DIR$/combine.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transforms.py" beforeDir="false" afterPath="$PROJECT_DIR$/transforms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../temporal-segment-networks/lib/dense_flow" beforeDir="false" afterPath="$PROJECT_DIR$/../temporal-segment-networks/lib/dense_flow" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -146,6 +139,7 @@
       <workItem from="1565049404779" duration="16000" />
       <workItem from="1565063042858" duration="37000" />
       <workItem from="1565108639261" duration="2157000" />
+      <workItem from="1565631931133" duration="77000" />
     </task>
     <servers />
   </component>
