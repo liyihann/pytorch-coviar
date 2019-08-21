@@ -347,7 +347,7 @@ nohup python test.py --gpus 0 \
 
 After getting the evaluation results for each decoupled model using `test.py`, we use `combine.py` to combine the results and calculate the final accuracy.
 
-```python
+```bash
 python combine.py --iframe ${IFRAME_SCORE_FILE_PATH} \
 	--mv ${MV_SCORE_FILE_PATH} \
 	--res ${RESIDUAL_SCORE_FILE_PATH}
