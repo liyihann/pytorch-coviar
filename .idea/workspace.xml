@@ -2,11 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1a1cce57-f90d-42ef-8e84-0fff79f6d0c2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../MV-release/.idea/MV-release.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../MV-release/.idea/MV-release.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../temporal-segment-networks/lib/dense_flow" beforeDir="false" afterPath="$PROJECT_DIR$/../temporal-segment-networks/lib/dense_flow" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -140,6 +137,17 @@
       <workItem from="1565063042858" duration="37000" />
       <workItem from="1565108639261" duration="2157000" />
       <workItem from="1565631931133" duration="101000" />
+      <workItem from="1565634132641" duration="190000" />
+      <workItem from="1565644962767" duration="979000" />
+      <workItem from="1565713160600" duration="1000" />
+      <workItem from="1565807657242" duration="645000" />
+      <workItem from="1565809135248" duration="16000" />
+      <workItem from="1565815400395" duration="1985000" />
+      <workItem from="1565821882989" duration="3932000" />
+      <workItem from="1565972651688" duration="758000" />
+      <workItem from="1565990284619" duration="107000" />
+      <workItem from="1566247258402" duration="685000" />
+      <workItem from="1566250901886" duration="183000" />
     </task>
     <servers />
   </component>
