@@ -360,7 +360,7 @@ To test motion vector models  using multiple stacked motion vectors, add a param
 ```bash
 python test.py --gpus 0 \
 	--arch resnet18 --test-crops 1 \
-	--data-name ucf101 --representation mv --mv_stack_size \
+	--data-name ucf101 --representation mv --mv_stack_size 5 \
 	--data-root data/ucf101/mpeg4_videos \
 	--test-list data/datalists/ucf101_split1_test.txt \
 	--weights ${MODEL_PATH} \
