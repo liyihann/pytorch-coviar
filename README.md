@@ -293,9 +293,18 @@ nohup python train.py --lr 0.01 --batch-size 40 --arch resnet18 \
 
 #### Training using stacked MVs
 
-If you want to train motion vector models  using multiple stacked motion vectors, you should modify some code in `dataset.py`  and `models.py`. It is a little complicated to explain. Therefore, I am working on providing a simpler way to indicate the parameter just by using bash commands. 
+To train motion vector models  using multiple stacked motion vectors, add a parameter `--mv_stack_size` in the bash command. The default value is 1. Take 5 stacked mvs as an example, 
 
-So, this part is to be continued.
+```bash
+python train.py --lr 0.01 --batch-size 40 --arch resnet18 \
+ 	--data-name ucf101 --representation mv --mv_stack_size 5\
+ 	--data-root data/ucf101/mpeg4_videos \
+ 	--train-list data/datalists/ucf101_split1_train.txt \
+ 	--test-list data/datalists/ucf101_split1_test.txt \
+ 	--model-prefix ucf101_mv_model \
+ 	--lr-steps 150 270 390  --epochs 510 \
+ 	--gpus 0 
+```
 
 ### Testing
 
@@ -343,6 +352,20 @@ nohup python test.py --gpus 0 \
 	--save-scores ${SCORE_FILE_PATH} &
 ```
 
+#### Testing using stacked MVs
+
+To test motion vector models  using multiple stacked motion vectors, add a parameter `--mv_stack_size` in the bash command. The default value is 1. Take 5 stacked mvs as an example, 
+
+
+```bash
+python test.py --gpus 0 \
+	--arch resnet18 --test-crops 1 \
+	--data-name ucf101 --representation mv --mv_stack_size \
+	--data-root data/ucf101/mpeg4_videos \
+	--test-list data/datalists/ucf101_split1_test.txt \
+	--weights ${MODEL_PATH} \
+	--save-scores ${SCORE_FILE_PATH}
+```
 ### Combining Model Scores
 
 After getting the evaluation results for each decoupled model using `test.py`, we use `combine.py` to combine the results and calculate the final accuracy.
