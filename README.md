@@ -222,7 +222,7 @@ Function `get_num_frames` takes path to a specified video as parameters and retu
 
 ```python
 from coviar import get_num_frames
-num_frames = get_num_frames([$VIDEO_PATH])
+num_frames = get_num_frames([${VIDEO_PATH}])
 print(num_frames)
 ```
 
@@ -230,7 +230,7 @@ Function `load ` returns a specified frame image. It takes path to a specified v
 
 ```python
 from coviar import load
-image = load([$VIDEO_PATH], [gop_index], [frame_index], [representation_type], [isAccumulate])
+image = load([${VIDEO_PATH}], [gop_index], [frame_index], [representation_type], [isAccumulate])
 ```
 
 Here, `gop_index` is specified by `frame_index=0,1,...` of one GOP which is specified by `frame_index=0,1,...`. `representation_type` can be `0`, `1`, or `2` where `0` is for I-frames, `1` is for motion vectors and `2` is for residuals. `isAccumulate` can be either `True` or `False` where `True` returns the accumulated representation and `False` returns the original compressed representations. 
