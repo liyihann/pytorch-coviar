@@ -5,7 +5,7 @@ from transforms import GroupMultiScaleCrop
 from transforms import GroupRandomHorizontalFlip
 import torchvision
 
-MV_STACK_SIZE = 5
+# MV_STACK_SIZE = 5
 
 class Flatten(nn.Module):
     def __init__(self):
@@ -16,10 +16,11 @@ class Flatten(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, num_class, num_segments, representation,
-                 base_model='resnet152'):
+                 base_model='resnet152',mv_stack_size = 1):
         super(Model, self).__init__()
         self._representation = representation
         self.num_segments = num_segments
+        self.mv_stack_size = mv_stack_size
 
         print(("""
 Initializing model:
@@ -65,12 +66,12 @@ Initializing model:
             # self.data_bn = nn.BatchNorm2d(2)
             # -----------------------------ORIGINAL_CODE_END-------------------------------
             # -----------------------------MODIFIED_CODE_START-----------------------------
-                    nn.Conv2d(2*MV_STACK_SIZE, 64,
+                    nn.Conv2d(2*self.mv_stack_size, 64,
                               kernel_size=(7, 7),
                               stride=(2, 2),
                               padding=(3, 3),
                               bias=False))
-            self.data_bn = nn.BatchNorm2d(2*MV_STACK_SIZE)
+            self.data_bn = nn.BatchNorm2d(2*self.mv_stack_size)
             # -----------------------------MODIFIED_CODE_END-------------------------------
         if self._representation == 'residual':
             self.data_bn = nn.BatchNorm2d(3)

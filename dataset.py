@@ -16,10 +16,15 @@ from coviar import get_num_frames
 from coviar import load
 from transforms import color_aug
 
+# -----------------------------MODIFIED_CODE_START-----------------------------
+from timeit import default_timer as timer
+from datetime import timedelta
+# -----------------------------MODIFIED_CODE_END-------------------------------
+
 # each group of pictures (GoP) has 12 frames
 GOP_SIZE = 12
 
-MV_STACK_SIZE = 5
+# MV_STACK_SIZE = 5
 
 TEST_CROP_SIZE= 1
 
@@ -67,7 +72,7 @@ def get_gop_pos(frame_idx, representation):
 
 #################################################################################
 # -----------------------------MODIFIED_CODE_START-----------------------------
-def get_gop_pos_consecutive(frame_idx, representation):
+def get_gop_pos_consecutive(frame_idx, representation,mv_stack_size):
     gop_pos_list = []
     gop_index = frame_idx // GOP_SIZE
     gop_pos = frame_idx % GOP_SIZE
@@ -75,11 +80,11 @@ def get_gop_pos_consecutive(frame_idx, representation):
         if gop_pos == 0:
             gop_index -= 1
             gop_pos = GOP_SIZE - 1
-        if gop_pos <= GOP_SIZE-MV_STACK_SIZE:
-            for i in range(0,MV_STACK_SIZE):
+        if gop_pos <= GOP_SIZE-mv_stack_size:
+            for i in range(0,mv_stack_size):
                 gop_pos_list.append(gop_pos+i)
         else:
-            for i in range(1, MV_STACK_SIZE - (GOP_SIZE - gop_pos) + 1):
+            for i in range(1, mv_stack_size - (GOP_SIZE - gop_pos) + 1):
                 gop_pos_list.append(gop_pos-i)
             gop_pos_list.reverse()
             for i in range(0,GOP_SIZE-gop_pos):
@@ -99,7 +104,7 @@ class CoviarDataSet(data.Dataset):
                  transform,
                  num_segments,
                  is_train,
-                 accumulate):
+                 accumulate, mv_stack_size = 1):
 
         self._data_root = data_root # root_path
         self._data_name = data_name
@@ -115,6 +120,11 @@ class CoviarDataSet(data.Dataset):
             np.array([0.229, 0.224, 0.225]).reshape((1, 3, 1, 1))).float()
 
         self._load_list(video_list) # list_file, _parse_list()
+
+        self.mv_stack_size = mv_stack_size
+
+        # self.load_total_time = timedelta(seconds=0)
+        # self.load_total_count = 0
 
     def _load_list(self, video_list):
         # video_list: e.g. ucf101_split1_train.txt
@@ -134,6 +144,7 @@ class CoviarDataSet(data.Dataset):
                 # _video_list: path(*.avi), label(0), number of frames
 
         print('%d videos loaded.' % len(self._video_list))
+
 
     def _get_train_frame_index(self, num_frames, seg):
         # Compute the range of the segment.
@@ -159,6 +170,8 @@ class CoviarDataSet(data.Dataset):
         return get_gop_pos(v_frame_idx, self._representation)
 
     def __getitem__(self, index):
+        # self.load_total_count = self.load_total_count + 1
+        # item_start_time = timer()
 
         if self._representation == 'mv':
             representation_idx = 1
@@ -210,20 +223,37 @@ class CoviarDataSet(data.Dataset):
             # -----------------------------MODIFIED_CODE_START-----------------------------
             # Method 1: frames_length = segnum * 5, sample 5 MV frames randomly
             # if self._representation in ['mv', 'residual']:
-            #     for i in range(MV_STACK_SIZE):
+            #     for i in range(self.mv_stack_size):
             #         frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
             # else:
             #     frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
             # -----------------------------MODIFIED_CODE_END-------------------------------
             # -----------------------------MODIFIED_CODE_START-----------------------------
             # Method 2: frames_length = segnum * 5, sample 5 MV frames consecutively
+            # if self._representation in ['mv', 'residual']:
+            #     gop_index, gop_pos_list = self.get_frame_indice_consecutive(num_frames,seg)
+            #     for gop_pos in gop_pos_list:
+            #         frames = self.process_segment_consecutive(frames, gop_index, gop_pos, video_path,representation_idx)
+            # else:
+            #     frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
+            # -----------------------------MODIFIED_CODE_END-----------------------------
+            # -----------------------------MODIFIED_CODE_START-----------------------------
             if self._representation in ['mv', 'residual']:
-                gop_index, gop_pos_list = self.get_frame_indice_consecutive(num_frames,seg)
-                for gop_pos in gop_pos_list:
-                    frames = self.process_segment_consecutive(frames, gop_index, gop_pos, video_path,representation_idx)
+                if self.mv_stack_size > 1:
+                    gop_index, gop_pos_list = self.get_frame_indice_consecutive(num_frames,seg)
+                    for gop_pos in gop_pos_list:
+                        frames = self.process_segment_consecutive(frames, gop_index, gop_pos, video_path,representation_idx)
+                else:
+                    frames = self.process_segment_random(frames, num_frames, seg, video_path, representation_idx)
             else:
                 frames = self.process_segment_random(frames,num_frames,seg,video_path,representation_idx)
             # -----------------------------MODIFIED_CODE_END-----------------------------
+        # item_load_end_time = timer()
+        # self.load_total_time += timedelta(seconds=item_load_end_time-item_start_time)
+        # print("average:"+str(self.load_total_time.total_seconds()/self.load_total_count))
+
+        # compute_start = timer()
+
         # frames:   before transform:
         # RGB: num_seg(3) * height * width * num_channel(3,RGB)
         # MV: (num_seg3*stack_size5) * height * width * num_channel(2,R/G,x/y)
@@ -244,15 +274,15 @@ class CoviarDataSet(data.Dataset):
         # print("frames.shape:"+str(frames.shape))      # training (15, 224, 224, 2)
                                     # testing: original code, num_segments = 25, test-crop = 10,  frames:(250, 224, 224, 2)
                                     # testing: newcode frames: (250, 224, 224, 2)
-        if MV_STACK_SIZE > 1:
+        if self.mv_stack_size> 1:
             frame_stack = []
             frame_mv = frames
 
             if self._is_train:
                 if self._representation in ['mv', 'residual']:
                     for seg in range(self._num_segments):
-                        frame_stack.append(frame_mv[:MV_STACK_SIZE])
-                        frame_mv = frame_mv[MV_STACK_SIZE:]
+                        frame_stack.append(frame_mv[:self.mv_stack_size])
+                        frame_mv = frame_mv[self.mv_stack_size:]
                     # frame_stack: 5 * 224 * 224 * 2
                 # frame_stack = np.array(frame_stack)
                 # print(frame_stack.shape)          # (3, 5, 224, 224, 2)
@@ -265,8 +295,8 @@ class CoviarDataSet(data.Dataset):
             else:
                 if self._representation in ['mv', 'residual']:
                     for seg in range(self._num_segments*TEST_CROP_SIZE):
-                        frame_stack.append(frame_mv[:MV_STACK_SIZE])
-                        frame_mv = frame_mv[MV_STACK_SIZE:]
+                        frame_stack.append(frame_mv[:self.mv_stack_size])
+                        frame_mv = frame_mv[self.mv_stack_size:]
                         # print("seg:"+str(seg.__index__()))
                         # frame_stack = np.array(frame_stack)
                         # print("frame_stack:" + str(frame_stack.shape))
@@ -324,6 +354,9 @@ class CoviarDataSet(data.Dataset):
         elif self._representation == 'mv':
             input = (input - 0.5)
 
+        # compute_end = timer()
+        # self.load_total_time += timedelta(seconds=compute_end - compute_start)
+        # print("average:" + str(self.load_total_time.total_seconds() / self.load_total_count))
         return input, label
 
     def __len__(self):
@@ -369,7 +402,7 @@ class CoviarDataSet(data.Dataset):
         seg_begin, seg_end = get_seg_range(num_frames, self._num_segments, seg,
                                                  representation=self._representation)
         v_frame_idx = random.randint(seg_begin, seg_end - 1)
-        return get_gop_pos_consecutive(v_frame_idx, self._representation)
+        return get_gop_pos_consecutive(v_frame_idx, self._representation,self.mv_stack_size)
 
     def _get_test_frame_index_consecutive(self, num_frames, seg):
         if self._representation in ['mv', 'residual']:
@@ -378,7 +411,7 @@ class CoviarDataSet(data.Dataset):
         v_frame_idx = int(np.round(seg_size * (seg + 0.5)))
         if self._representation in ['mv', 'residual']:
             v_frame_idx += 1
-        return get_gop_pos_consecutive(v_frame_idx, self._representation)
+        return get_gop_pos_consecutive(v_frame_idx, self._representation,self.mv_stack_size)
 
     def process_segment_consecutive(self, frames, gop_index, gop_pos, video_path,representation_idx):
         # if self._is_train:

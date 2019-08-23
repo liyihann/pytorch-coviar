@@ -17,6 +17,7 @@ from transforms import GroupScale
 
 SAVE_FREQ = 40
 PRINT_FREQ = 20
+# PRINT_FREQ = 1
 best_prec1 = 0
 
 
@@ -42,7 +43,7 @@ def main():
     # base_model: base architecture
 
     model = Model(num_class, args.num_segments, args.representation,
-                  base_model=args.arch)
+                  base_model=args.arch,mv_stack_size=args.mv_stack_size)
     print(model)
 
     # dataset (Dataset) – dataset from which to load the data.
@@ -78,6 +79,7 @@ def main():
 
             is_train=True,
             accumulate=(not args.no_accumulation),
+            mv_stack_size=args.mv_stack_size
             ),
         batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True)
@@ -110,6 +112,7 @@ def main():
 
             is_train=False,
             accumulate=(not args.no_accumulation),
+            mv_stack_size=args.mv_stack_size
             ),
 
         batch_size=args.batch_size, shuffle=False,
@@ -170,6 +173,8 @@ def train(train_loader, model, criterion, optimizer, epoch, cur_lr):
     top1 = AverageMeter()
     top5 = AverageMeter()
 
+    train_time = AverageMeter()
+
     model.train()
 
     end = time.time()
@@ -186,9 +191,6 @@ def train(train_loader, model, criterion, optimizer, epoch, cur_lr):
 
         # compute output
         output = model(input_var)
-        # -----------------------------MODIFIED_CODE_START-------------------------------
-        # print("output: "+str(output.shape))
-        # -----------------------------MODIFIED_CODE_END---------------------------------
 
         output = output.view((-1, args.num_segments) + output.size()[1:])
         output = torch.mean(output, dim=1)
@@ -212,7 +214,19 @@ def train(train_loader, model, criterion, optimizer, epoch, cur_lr):
 
         # measure elapsed time
         batch_time.update(time.time() - end)
+
+        train_time.update(batch_time.val-data_time.val)
+
         end = time.time()
+        # if i % PRINT_FREQ == 0:
+        #     print(('Epoch: [{0}][{1}/{2}]\t'
+        #            'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+        #            'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+        #            'Train {train_time.val:.3f} ({train_time.avg:.3f})'.format(
+        #         epoch, i, len(train_loader),
+        #         batch_time=batch_time,
+        #         data_time=data_time,
+        #         train_time = train_time)))
 
         if i % PRINT_FREQ == 0:
             print(('Epoch: [{0}][{1}/{2}], lr: {lr:.7f}\t'
@@ -228,6 +242,7 @@ def train(train_loader, model, criterion, optimizer, epoch, cur_lr):
                        top1=top1,
                        top5=top5,
                        lr=cur_lr)))
+
 
 def validate(val_loader, model, criterion):
     batch_time = AverageMeter()

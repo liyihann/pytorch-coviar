@@ -47,3 +47,8 @@ parser.add_argument('--model-prefix', type=str, default="model",
                     help="prefix of model name.")
 parser.add_argument('--gpus', nargs='+', type=int, default=None,
                     help='gpu ids.')
+
+# -----------------------------MODIFIED_CODE_START-----------------------------
+parser.add_argument('--mv_stack_size', type=int, default=1,
+                    help='number of stacked motion vectors.')
+# -----------------------------MODIFIED_CODE_END-------------------------------

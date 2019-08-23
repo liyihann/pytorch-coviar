@@ -41,6 +41,7 @@ parser.add_argument('--test_segments', type=int, default=25)
 # -----------------------------MODIFIED_CODE_START-----------------------------
 parser.add_argument('--test-crops', type=int, default=1)
 # -----------------------------MODIFIED_CODE_END-------------------------------
+
 # --test-crops specifies how many crops per segment.
 # The value should be 1 or 10.
 # 1 means using only one center crop.
@@ -50,6 +51,10 @@ parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('-j', '--workers', default=1, type=int, metavar='N',
                     help='number of workers for data loader.')
 parser.add_argument('--gpus', nargs='+', type=int, default=None)
+# -----------------------------MODIFIED_CODE_START-----------------------------
+parser.add_argument('--mv_stack_size', type=int, default=1,
+                    help='number of stacked motion vectors.')
+# -----------------------------MODIFIED_CODE_END-------------------------------
 
 args = parser.parse_args()
 
@@ -71,7 +76,7 @@ def main():
     base_model: base architecture
     '''
     net = Model(num_class, args.test_segments, args.representation,
-                base_model=args.arch)
+                base_model=args.arch,mv_stack_size=args.mv_stack_size)
 
     # -----------------------------MODIFIED_CODE_START-------------------------------
     # print(net)
@@ -157,6 +162,7 @@ def main():
             # -----------------------
             is_train=False,
             accumulate=(not args.no_accumulation),
+            mv_stack_size=args.mv_stack_size
             ),
         batch_size=1, shuffle=False,
         # -----------------------------ORIGINAL_CODE_START-----------------------------
