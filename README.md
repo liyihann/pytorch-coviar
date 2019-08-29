@@ -90,7 +90,7 @@ Configure environment in `anaconda`.
 
 ```bash
 ln -s ${COVIAR_PATH}/data_loader/ffmpeg/bin/ffmpeg ${ANACONDA_PATH}/envs/coviar/bin/
-cp -R ${COVIAR_PATH}/data_loader/ffmpeg/lib/* ${ANACONDA_PATH}/envs/origin/lib/
+cp -R ${COVIAR_PATH}/data_loader/ffmpeg/lib/* ${ANACONDA_PATH}/envs/coviar/lib/
 ```
 
 Set environment variable `$LD_LIBRARY_PATH`. This environment variable will be effective once the environment is activated.
