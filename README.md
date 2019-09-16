@@ -134,6 +134,8 @@ conda activate coviar
 
 #### 5. Build CoViAR DataLoader
 
+Note that we use `python3` here.
+
 ```bash
 cd ${COVIAR_PATH}/data_loader
 rm -rf build
@@ -147,6 +149,12 @@ Download datasets to  `data` folder.
 
 ```bash
 cd ${COVIAR_PATH}/data
+```
+
+Install `unrar` command.
+
+```bash
+sudo apt-get install unrar
 ```
 
 Download [`UCF-101`](https://www.crcv.ucf.edu/data/UCF101.php) dataset.
